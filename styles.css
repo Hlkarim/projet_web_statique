@@ -1,0 +1,183 @@
+/* Règles globales */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f9f9f9;
+    padding: 0;
+    margin: 0;
+}
+
+/* En-tête et navigation */
+header {
+    background-color: #4CAF50;
+    color: white;
+    padding: 1rem;
+    border-radius: 9px;
+    width: 60%;
+    margin: 10px auto;
+}
+
+header nav ul {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+header nav ul li {
+    display: inline;
+}
+
+header nav ul li a {
+    color: white;
+    text-decoration: none;
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+    transition: background-color 0.3s ease;
+}
+
+header nav ul li a:hover {
+    background-color: #45a049;
+    border-radius: 5px;
+}
+
+/* Contenu principal */
+main {
+    padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Sections */
+section {
+    margin-bottom: 2rem;
+}
+
+h1, h2 {
+    color: #4CAF50;
+    margin-bottom: 1rem;
+}
+
+p {
+    margin-bottom: 1rem;
+    line-height: 1.8;
+}
+
+/* Liste des projets et galerie */
+
+.gallery {
+    display: flex;
+    overflow-x: auto;
+    gap: 10px;
+    padding: 20px;
+    scroll-behavior: smooth;
+    border-radius: 10px;
+    border: 1px solid #4CAF50;
+    background-color: #f9f9f9;
+    scroll-snap-type: x mandatory;
+}
+
+.gallery img {
+    flex: 0 0 60%;
+    max-width: none;
+    height: 500px;
+    border: 2px solid #777777;
+    object-fit: cover;
+    scroll-snap-align: start;
+}
+
+
+/* Formulaire de contact */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+form label {
+    font-weight: bold;
+}
+
+form input, form textarea, form button {
+    font-size: 1rem;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+form input:focus, form textarea:focus {
+    border-color: #4CAF50;
+    outline: none;
+}
+
+form button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+form button:hover {
+    background-color: #45a049;
+}
+
+/* code box */
+
+.code-box {
+    /* conteneur */
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+
+
+    /* Code text  */
+    pre {
+        margin: 0;
+        color: #d4d4d4;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        white-space: pre;
+    }
+}
+
+
+/* Pied de page */
+footer {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 1rem 0;
+    margin-top: auto; /* Positionne le footer après le contenu */
+}
+
+/* Liens externes */
+#links ul {
+    list-style: none;
+    padding: 0;
+    text-align: center;
+}
+
+#links ul li {
+    margin-bottom: 10px;
+}
+
+#links ul li a {
+    color: #4CAF50;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+#links ul li a:hover {
+    color: #45a049;
+}

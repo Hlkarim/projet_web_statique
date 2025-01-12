@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Projets de Abdelkarim Haddad - Cartes géographiques et Data Engineering">
+    <link rel="stylesheet" href="styles.css">
+    <title>Projets - Portfolio Abdelkarim</title>
+</head>
+<body>
+<header>
+    <nav>
+        <ul>
+            <li><a href="index.html">Accueil</a></li>
+            <li><a href="about.html">À propos</a></li>
+            <li><a href="projects.html">Projets</a></li>
+            <li><a href="contact.html">Contact</a></li>
+        </ul>
+    </nav>
+</header>
+
+<main>
+
+    <section id="data-engineering">
+        <h2>Data Engineering</h2>
+        <br><br>
+        <h3>Evaluation de sentier de rendonnée</h3>
+        <p>Cette requête PostgreSQL analyse des sentiers de randonnée en évaluant leurs caractéristiques géographiques (élévation, points de vue, météo). Elle découpe les sentiers en segments d'un kilomètre et calcule un score scénique pour chaque sentier.</p>
+        <div class="code-box">
+    <pre>
+        WITH trail_segments AS (
+    -- Break trails into 1km segments for detailed analysis
+    SELECT
+        t.trail_id,
+        t.trail_name,
+        ST_LineSubstring(
+            t.geometry,
+            generate_series(0, ceil(ST_Length(t.geometry::geography)/1000)::integer)::float/ceil(ST_Length(t.geometry::geography)/1000),
+            LEAST(((generate_series(0, ceil(ST_Length(t.geometry::geography)/1000)::integer) + 1)::float/ceil(ST_Length(t.geometry::geography)/1000)), 1)
+        ) AS segment_geom
+    FROM trails t
+),
+
+elevation_stats AS (
+    -- Calculate elevation statistics for each segment
+    SELECT
+        ts.trail_id,
+        ts.segment_geom,
+        ST_Summarystats(ST_Clip(dem.rast, ts.segment_geom)) AS elev_stats
+    FROM trail_segments ts
+    CROSS JOIN LATERAL (
+        SELECT rast FROM elevation_dem
+        WHERE ST_Intersects(rast, ts.segment_geom)
+    ) dem
+),
+
+scenic_points AS (
+    -- Find scenic viewpoints along trails
+    SELECT
+        ts.trail_id,
+        ts.trail_name,
+        COUNT(v.viewpoint_id) AS viewpoint_count,
+        array_agg(DISTINCT v.viewpoint_type) AS viewpoint_types,
+        ST_CollectionExtract(
+            ST_Collect(ST_Buffer(v.geom, 100)::geometry),
+            3
+        ) AS viewshed_area
+    FROM trail_segments ts
+    JOIN viewpoints v ON ST_DWithin(ts.segment_geom::geography, v.geom::geography, 200)
+    GROUP BY ts.trail_id, ts.trail_name
+),
+
+weather_exposure AS (
+    -- Analyze weather exposure risk using terrain and historical data
+    SELECT
+        ts.trail_id,
+        sum(CASE
+            WHEN ST_Value(w.wind_rast, ST_Centroid(ts.segment_geom)) > 30
+            AND e.elev_stats->>'max' > 2000
+            THEN 1 ELSE 0
+        END) AS high_wind_exposure_segments,
+        avg(ST_Value(w.precipitation_rast, ST_Centroid(ts.segment_geom))) AS avg_annual_precipitation
+    FROM trail_segments ts
+    JOIN elevation_stats e ON ts.trail_id = e.trail_id
+    CROSS JOIN LATERAL (
+        SELECT rast AS wind_rast, rast AS precipitation_rast
+        FROM weather_data
+        WHERE ST_Intersects(rast, ts.segment_geom)
+    ) w
+    GROUP BY ts.trail_id
+)
+
+-- Final query combining all analyses
+SELECT
+    t.trail_name,
+    t.difficulty_level,
+    ST_Length(t.geometry::geography)/1000 AS length_km,
+    sp.viewpoint_count,
+    sp.viewpoint_types,
+    ST_Area(sp.viewshed_area::geography)/1000000 AS viewshed_area_km2,
+    we.high_wind_exposure_segments,
+    we.avg_annual_precipitation,
+    CASE
+        WHEN we.high_wind_exposure_segments > 3 THEN 'High wind risk'
+        WHEN we.avg_annual_precipitation > 1500 THEN 'High precipitation risk'
+        ELSE 'Normal conditions'
+    END AS weather_risk_category,
+    -- Calculate a "scenic rating" based on various factors
+    (
+        (sp.viewpoint_count * 2) +
+        (ST_Area(sp.viewshed_area::geography)/1000000) +
+        (CASE WHEN e.elev_stats->>'max' > 2500 THEN 5 ELSE 0 END)
+    )::numeric(10,2) AS scenic_rating
+FROM trails t
+JOIN scenic_points sp ON t.trail_id = sp.trail_id
+JOIN weather_exposure we ON t.trail_id = we.trail_id
+JOIN elevation_stats e ON t.trail_id = e.trail_id
+WHERE
+    -- Filter for trails that meet certain criteria
+    ST_Length(t.geometry::geography) > 5000 -- Longer than 5km
+    AND EXISTS (
+        SELECT 1
+        FROM parking_areas p
+        WHERE ST_DWithin(
+            ST_StartPoint(t.geometry)::geography,
+            p.geom::geography,
+            1000
+        )
+    )
+ORDER BY scenic_rating DESC, length_km;
+    </pre>
+        </div>
+
+        <br><br>
+
+        <h3>Matching et comparaison d'entitées graphique</h3>
+        <p>Le script compare les zones géographiques de deux ensembles de polygones en calculant la différence entre la somme des surfaces de ces polygones, en fonction de types spécifiques, et les insère dans une table de comparaison.</p>
+
+        <div class="code-box">
+            <pre>
+              WITH route_sections AS (
+    -- Break urban routes into 500m sections
+    SELECT
+        r.route_id,
+        r.route_name,
+        ST_LineSubstring(
+            r.geom,
+            generate_series(0, ceil(ST_Length(r.geom::geography)/500)::integer)::float/ceil(ST_Length(r.geom::geography)/500),
+            LEAST(((generate_series(0, ceil(ST_Length(r.geom::geography)/500)::integer) + 1)::float/ceil(ST_Length(r.geom::geography)/500)), 1)
+        ) AS section_geom
+    FROM urban_routes r
+),
+
+traffic_density AS (
+    -- Calculate traffic patterns for each section
+    SELECT
+        rs.route_id,
+        rs.section_geom,
+        ST_Summarystats(ST_Clip(traffic.rast, rs.section_geom)) AS traffic_stats
+    FROM route_sections rs
+    CROSS JOIN LATERAL (
+        SELECT rast FROM traffic_density_map
+        WHERE ST_Intersects(rast, rs.section_geom)
+    ) traffic
+),
+
+poi_clusters AS (
+    -- Find points of interest along routes
+    SELECT
+        rs.route_id,
+        rs.route_name,
+        COUNT(p.poi_id) AS poi_count,
+        array_agg(DISTINCT p.poi_category) AS poi_types,
+        ST_CollectionExtract(
+            ST_Collect(ST_Buffer(p.geom, 50)::geometry),
+            3
+        ) AS service_area
+    FROM route_sections rs
+    JOIN points_of_interest p ON ST_DWithin(rs.section_geom::geography, p.geom::geography, 100)
+    GROUP BY rs.route_id, rs.route_name
+),
+
+population_density AS (
+    -- Analyze population density along routes
+    SELECT
+        rs.route_id,
+        sum(CASE
+            WHEN ST_Value(pd.density_rast, ST_Centroid(rs.section_geom)) > 5000
+            AND t.traffic_stats->>'max' > 1000
+            THEN 1 ELSE 0
+        END) AS high_density_sections,
+        avg(ST_Value(pd.density_rast, ST_Centroid(rs.section_geom))) AS avg_population_density
+    FROM route_sections rs
+    JOIN traffic_density t ON rs.route_id = t.route_id
+    CROSS JOIN LATERAL (
+        SELECT rast AS density_rast
+        FROM population_data
+        WHERE ST_Intersects(rast, rs.section_geom)
+    ) pd
+    GROUP BY rs.route_id
+)
+
+SELECT
+    r.route_name,
+    r.transport_type,
+    ST_Length(r.geom::geography)/1000 AS length_km,
+    pc.poi_count,
+    pc.poi_types,
+    ST_Area(pc.service_area::geography)/1000000 AS service_area_km2,
+    pd.high_density_sections,
+    pd.avg_population_density,
+    CASE
+        WHEN pd.high_density_sections > 5 THEN 'High congestion risk'
+        WHEN pd.avg_population_density > 8000 THEN 'High usage area'
+        ELSE 'Normal capacity'
+    END AS density_category,
+    (
+        (pc.poi_count * 1.5) +
+        (ST_Area(pc.service_area::geography)/1000000) +
+        (CASE WHEN t.traffic_stats->>'max' > 1500 THEN 3 ELSE 0 END)
+    )::numeric(10,2) AS route_importance_score
+FROM urban_routes r
+JOIN poi_clusters pc ON r.route_id = pc.route_id
+JOIN population_density pd ON r.route_id = pd.route_id
+JOIN traffic_density t ON r.route_id = t.route_id
+WHERE
+    ST_Length(r.geom::geography) > 2000 -- Longer than 2km
+    AND EXISTS (
+        SELECT 1
+        FROM transport_hubs h
+        WHERE ST_DWithin(
+            ST_StartPoint(r.geom)::geography,
+            h.geom::geography,
+            500
+        )
+    )
+ORDER BY route_importance_score DESC, length_km;
+            </pre>
+        </div>
+
+    </section>
+
+
+
+
+</main>
+
+<footer>
+    <p>&copy; 2024 Abdelkarim Haddad. Tous droits réservés.</p>
+</footer>
+</body>
+</html>
