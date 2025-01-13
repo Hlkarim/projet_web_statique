@@ -18,10 +18,10 @@ body {
 header {
     background-color: #4CAF50;
     color: white;
-    padding: 1rem;
     border-radius: 9px;
     width: 60%;
-    margin: 10px auto;
+    margin: 30px auto;
+    padding: 10px;
 }
 
 header nav ul {
@@ -32,13 +32,15 @@ header nav ul {
 
 header nav ul li {
     display: inline;
+    gap: 1rem;
+
 }
 
 header nav ul li a {
     color: white;
     text-decoration: none;
     font-size: 1rem;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 2rem;
     transition: background-color 0.3s ease;
 }
 
@@ -49,9 +51,9 @@ header nav ul li a:hover {
 
 /* Contenu principal */
 main {
-    padding: 2rem;
+    padding-top: 2rem;
     max-width: 800px;
-    margin: 0 auto;
+    margin: 5px auto;
 }
 
 /* Sections */
@@ -182,11 +184,22 @@ footer {
     color: #45a049;
 }
 
+#menuBurger,
+label[for="menuBurger"] {
+    display: none;
+}
+
+
+
 /* Responsive */
 @media screen and (max-width: 768px) {
     /* Header et navigation */
     header {
         width: 90%;
+        position: relative;
+        padding: 0;
+        margin-bottom: 1rem;
+
     }
 
     header nav ul {
@@ -206,6 +219,13 @@ footer {
         padding: 0.8rem;
     }
 
+
+    main {
+
+        padding-top : 5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
     /* Galerie en version mobile */
     .gallery {
         flex-direction: column;
@@ -217,7 +237,46 @@ footer {
 
     .gallery img {
         flex: none;
-        width: 100%;
+        width:auto;
         height: 300px;
+    }
+
+
+
+    /* Show and style the hamburger icon */
+    label[for="menuBurger"] {
+        display: block;
+        cursor: pointer;
+        font-size: 2rem;
+        position: absolute;
+        right: 20px;
+        top: 10px;
+        color: #4caf50;
+    }
+
+    /* Hide navigation by default on mobile */
+    #navMenu ul {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        background-color: #4CAF50; /* Match header background */
+        padding: 10px 0;
+    }
+
+    /* Show navigation when checkbox is checked */
+    #menuBurger:checked ~ #navMenu ul {
+        display: flex;
+    }
+
+    /* Style menu items */
+    #navMenu li {
+        width: 100%;
+        text-align: center;
+    }
+
+    #navMenu li a {
+        display: block;
+        padding: 15px 0;
+        width: 100%;
     }
 }
