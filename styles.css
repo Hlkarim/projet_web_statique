@@ -14,6 +14,17 @@ body {
     margin: 0;
 }
 
+.main-title {
+    font-size: 4rem;
+    font-weight: 1000;
+    color: #4CAF50;
+    text-align: left;
+    margin-bottom: 1rem;
+    font-family: 'Arial', sans-serif;
+}
+
+
+
 /* En-tête et navigation */
 header {
     background-color: #4CAF50;
@@ -279,4 +290,11 @@ label[for="menuBurger"] {
         padding: 15px 0;
         width: 100%;
     }
+    /* Make it responsive */
+    .main-title {
+        font-size: 2rem;     /* Slightly smaller on mobile */
+        }
+
+
+
 }
